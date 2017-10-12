@@ -13,7 +13,7 @@ setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/asm-5")
 library(pacman)
 
 
-p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs)
+p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tidyverse, MASS, simr, MuMIn, cvTools, hydroGOF, lsr, pastecs, crqa)
 
 
 #MUTUAL() -->tells you mutual information, how easy it is to predict the next datapoint in timeseries, point in time. Conservative parameter --> the first dip before it goes up again.
@@ -44,7 +44,7 @@ N.B. There are looots of files to be dealt with. Probably too many for your comp
 - Extract "complex" descriptors: recurrence quantification analysis
 
 ```{r}
-setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/asm-5")
+setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5")
 
 pitch_1 = read.delim("Pitch/Study1D0S101T1_f0.txt", header = T)
 
@@ -83,6 +83,46 @@ evry_1
 #coef variation = 2.243059 times 10 :)
 
 
+# ---- Complex descriptions = recurrence plot
+
+pitch_2 = read.delim("Pitch/Study1D0S102T1_f0.txt", header = T)
+
+#Finding the optimal parameters: run on all pairs:
+par = list(lgM =  50, steps = seq(1, 6, 1),  radiusspan = 100,  radiussample = 40, normalize = 0,  rescale = 0,  mindiagline = 2,  minvertline = 2,  tw = 0,  whiteline = FALSE,  recpt = FALSE,  fnnpercent = 10,  typeami = "mindip")
+ans = optimizeParam(pitch_2$f0, pitch_2$f0, par, min.rec = 3.5, max.rec = 4.5)
+ans
+
+#try() --> selvom den ikke for en værdig så looper den videre/crasher ikke
+
+#Choose a common value for delay, emb.dim and radius
+Results=crqa (pitch_2$f0, pitch_2$f0, delay=26, embed=7, radius=25.47183,normalize=0,rescale=0,mindiagline = 2,minvertline = 2)
+
+#Represent the plot:
+RP=Results$RP
+RP = matrix(as.numeric(RP), nrow = ncol(RP)) 
+cols = c("white","blue4")
+image(RP, xlab = "", ylab = "", col = cols)
+
+
+
+
+
+
+
+
+#------#
+#Explore the lags of coordination:
+Profile=drpdfromts(x, x,datatype = 'continuous',ws=50,radius=radius)
+timecourse = round( seq(-5000,5000,100)/1000, digit = 1)
+maxlag = Profile$maxlag/1000
+profile = Profile$profile*100
+Prof=data.frame(profile)
+ggplot(Prof, aes(timecourse,profile))+geom_line()+ geom_vline(xintercept = timecourse[maxlag], colour='red')
+
+
+
+
+
 ```
 
 
@@ -91,6 +131,11 @@ evry_1
 - Remember to extract the relevant information from the file names (Participant, Diagnosis, Trial, Study)
 
 ```{r}
+
+#You should get all the descriptors (mean,sd, reccurence etc) for each txt file so after you run the loop you'll end up with big dataframe that has 1 row per each txt fil
+
+#Make a function that contains the above code (mean, etc, requrrence plot) which applies the code to all the files in the Pitch folder and puts them into a dataframe with 1 row per file, and mean/sd/time/f0/etc as columns).
+
 
 
 
