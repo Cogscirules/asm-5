@@ -145,23 +145,18 @@ ggplot(Prof, aes(timecourse,profile))+geom_line()+ geom_vline(xintercept = timec
 ```{r}
 
 #You should get all the descriptors (mean,sd, reccurence etc) for each txt file so after you run the loop you'll end up with big dataframe that has 1 row per each txt fil
-
-
-
 #Make a function that contains the above code (mean, etc, requrrence plot) which applies the code to all the files in the Pitch folder and puts them into a dataframe with 1 row per file, and mean/sd/time/f0/etc as columns).
 
 
 wd = setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/Pitch")
 
+
 my_func = function(x){
 directory = wd
-files = list.files(pattern="*.txt", full.names = TRUE)
-dfo = lapply(files, read.delim)
-dfi = lapply (dfo, summary)
-dinal_df = data.frame()
+temp = list.files(pattern="*.txt")
+files = lapply(temp, read.delim)
 
-for (i in x) {
-  f = read.delim(files[i])
+for (i in files) {
   mean = mean(i)
   standard_dev = sd(i) 
   range = range(i) 
@@ -170,7 +165,7 @@ for (i in x) {
   aad = aad(i)
   coef_var = stat.desc(i)
   recur_plot = r_plot(i)
-  final_df = rbind(final_df, data.frame(f, mean, standard_dev, range, median, iqr, aad, coef_var, recur_plot))
+  final_df = rbind(final_df, data.frame(files, mean, standard_dev, range, median, iqr, aad, coef_var, recur_plot))
 
 }  
 print(final_df)
