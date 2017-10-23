@@ -150,6 +150,21 @@ ggplot(Prof, aes(timecourse,profile))+geom_line()+ geom_vline(xintercept = timec
 
 wd = setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/Pitch")
 
+#Make a function which does all of the info-stuff above
+complete_info = function(x){
+  mean = mean(x)
+  standard_dev = sd(x) 
+  range = range(x) 
+  median = median(x)
+  iqr = IQR(x)
+  aad = aad(x)
+  coef_var = stat.desc(x)
+  recur_plot = r_plot(x)
+  final_df = rbind(final_df, cbind(mean, standard_dev, range, median))
+  
+}
+
+#Make a function that opens all the files and loops the complete_info function on all of them, and wraps it up into a data frame.
 
 my_func = function(x){
 directory = wd
@@ -157,15 +172,8 @@ temp = list.files(pattern="*.txt")
 files = lapply(temp, read.delim)
 
 for (i in files) {
-  mean = mean(i)
-  standard_dev = sd(i) 
-  range = range(i) 
-  median = median(i)
-  iqr = IQR(i)
-  aad = aad(i)
-  coef_var = stat.desc(i)
-  recur_plot = r_plot(i)
-  final_df = rbind(final_df, data.frame(files, mean, standard_dev, range, median, iqr, aad, coef_var, recur_plot))
+  info = complete_info(i)
+  final_df = rbind(final_df, data.frame(info))
 
 }  
 print(final_df)
