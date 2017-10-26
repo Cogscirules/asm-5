@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/asm-5")
+setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5")
 
 library(pacman)
 
@@ -19,7 +19,7 @@ p_load(dplyr, lmerTest, ggplot2, stringr, plyr, caret, modelr, ModelMetrics, tid
 #MUTUAL() -->tells you mutual information, how easy it is to predict the next datapoint in timeseries, point in time. Conservative parameter --> the first dip before it goes up again.
 #optimize parameters, crqa, visualize, if you try to match files with demographic data etc - 
 
-# = = control, 1 = schiz
+# 0 = control, 1 = schiz
 #studyN = 3 different studies
 #D = diagnosis
 #S = subject
@@ -44,8 +44,6 @@ N.B. There are looots of files to be dealt with. Probably too many for your comp
 - Extract "complex" descriptors: recurrence quantification analysis
 
 ```{r}
-setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5")
-
 pitch_1 = read.delim("Pitch/Study1D0S101T1_f0.txt", header = T)
 
 
@@ -61,7 +59,11 @@ sd_1
 
 range_1 = range(pitch_1$f0)
 range_1
+range_min = range_1[1]
+range_max = range_1[2]
 #83.71 = lowest data point (pitch) / 225.72 = highest datapoint (pitch)
+
+standard = data.frame(mean_1, sd_1, range_min, range_max)
 
 
 # ---- Less standard descriptions
@@ -74,13 +76,23 @@ iqr_1 = IQR(pitch_1$f0)
 iqr_1
 #42.1375 = interquartile range between the first 25 % of distribution and last 25 % of the distribution (from 25 - 75 %)
 
-mean_abs_dev_1 = aad(pitch_1$f0)
-mean_abs_dev_1
+mean_abs = aad(pitch_1$f0)
+mean_abs
 #25.65087  
 
 evry_1 = stat.desc(pitch_1$f0, norm = T)
 evry_1
 #coef variation = 2.243059 times 10 :)
+# or
+
+coef_var = sd(pitch_1$f0, na.rm=TRUE)/mean(pitch_1$f0, na.rm = TRUE)*100
+coef_var
+#coef variation = 22.4309
+
+#bind
+less = data.frame(median_1, iqr_1, mean_abs, coef_var)
+
+
 
 
 # ---- Complex descriptions = recurrence plot
@@ -88,13 +100,18 @@ evry_1
 pitch_2 = read.delim("Pitch/Study1D0S102T1_f0.txt", header = T)
 
 #Finding the optimal parameters: run on all pairs:
+
+#list you ned for optimizeparam function
 par = list(lgM =  50, steps = seq(1, 6, 1),  radiusspan = 100,  radiussample = 40, normalize = 0,  rescale = 0,  mindiagline = 2,  minvertline = 2,  tw = 0,  whiteline = FALSE,  recpt = FALSE,  fnnpercent = 10,  typeami = "mindip")
+
+#get parameters for rqa
 ans = optimizeParam(pitch_2$f0, pitch_2$f0, par, min.rec = 3.5, max.rec = 4.5)
 ans
 
 #try() --> selvom den ikke får en værdi så looper den videre/crasher ikke
 
 #Choose a common value for delay, emb.dim and radius
+#File has to be imported twise since crqa plot compares two timeseries
 Results=crqa (pitch_2$f0, pitch_2$f0, delay=26, embed=7, radius=25.47183,normalize=0,rescale=0,mindiagline = 2,minvertline = 2)
 
 #Represent the plot:
@@ -103,7 +120,25 @@ RP = matrix(as.numeric(RP), nrow = ncol(RP))
 cols = c("white","blue4")
 image(RP, xlab = "", ylab = "", col = cols)
 
-#function this
+#Save variables from results to seperate variables
+
+RR = Results$RR
+DET = Results$DET
+MAXL = Results$maxL #maximal trajectory
+L = Results$L #mean trajectory
+ENTR = Results$ENTR
+LAM = Results$LAM
+TT = Results$TT
+
+#bind
+rqa = data.frame(RR, DET, MAXL, L, ENTR, LAM, TT)
+
+
+#bind all the combined frames above
+descriptors = data.frame(info, standard, less, rqa)
+
+
+#function this, maybe you will need it
 
 r_plot = function(x) {
   par = list(lgM =  50, steps = seq(1, 6, 1),  radiusspan = 100,  radiussample = 40, normalize = 0,  rescale = 0,  mindiagline = 2,  minvertline = 2,  tw = 0,  whiteline = FALSE,  recpt = FALSE,  fnnpercent = 10,  typeami = "mindip")
@@ -115,21 +150,6 @@ cols = c("white","blue4")
 image(RP, xlab = "", ylab = "", col = cols)
 } 
 
-
-
-
-
-
-
-
-#------#
-#Explore the lags of coordination:
-Profile=drpdfromts(x, x,datatype = 'continuous',ws=50,radius=radius)
-timecourse = round( seq(-5000,5000,100)/1000, digit = 1)
-maxlag = Profile$maxlag/1000
-profile = Profile$profile*100
-Prof=data.frame(profile)
-ggplot(Prof, aes(timecourse,profile))+geom_line()+ geom_vline(xintercept = timecourse[maxlag], colour='red')
 
 
 
@@ -148,57 +168,79 @@ ggplot(Prof, aes(timecourse,profile))+geom_line()+ geom_vline(xintercept = timec
 #Make a function that contains the above code (mean, etc, requrrence plot) which applies the code to all the files in the Pitch folder and puts them into a dataframe with 1 row per file, and mean/sd/time/f0/etc as columns).
 
 
-wd = setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/Pitch")
-
-
-#Make a function that opens all the files and loops the complete_info function on all of them, and wraps it up into a data frame.
 
 #Study1 D0 S 117 T3_f0.txt
 
-temp = list.files(pattern="*f0.txt")
+pitch_files=list.files(path = "Pitch", full.names = T)
+
 
 participant = NULL
 diagnosis = NULL
 trial = NULL
 study = NULL
+mean = NULL
+sd = NULL
+range_min = NULL
+range_max
+median = NULL
+iqr = NULL
+abs_dev = NULL
+coef_var = NULL
 delay= NULL
 radius = NULL
 embed = NULL
+recur_plot = NULL
 n = 1
 
+#Study1 D0 S 117 T3_f0.txt
 
-my_func = function(x){
-  files = read.delim(x, delim = "\t")
-  ID = str_extract(x, "S+\\d+")
-  participant = str_extract(ID, "\\d+")
-result = data.frame(participant)
-return(result)
+for (i in pitch_files){ 
+  x = read_csv(i, header = T)
+  x = x$f0
+  ID = str_extract(i, "S\\d+")
+  participant[n]=str_extract(ID, "\\d+")
+  d=str_extract(i, "D\\d+")
+  diagnosis[n] = str_extract(d, "\\d+")
+  t=str_extract(i, "T\\d+")
+  trial[n]=str_extract(t, "\\d+")
+  s=str_extract(i, "y\\d+")
+  study[n]=str_extract(s, "\\d+")
+
+  mean[n] = mean(x,na.rm = T)
+  sd[n] = sd(x,na.rm=T)
+  range = range(x)
+  range_min[n] = range[1]
+  range_max[n] = range[2]
   
-
-}
-
-my_func
-
-
-for (i in temp) {
-  print(i)
-  data = read_delim(i,delim = "\t")
-  ID = str_extract(i, "S+\\d+")
-  participant[n] = str_extract(ID,"\\d+")
-  diagnosis = str_extact(ID, "\D+\\")
-  mean = mean(i)
-  standard_dev = sd(i) 
-  range = range(i) 
-  median = median(i)
-  iqr = IQR(i)
-  aad = aad(i)
-  coef_var = stat.desc(i)
-  recur_plot = r_plot(i)
+  median[n] = median(x, na.rm=T)
+  iqr[n] = IQR(x, na.rm=T)
+  abs_dev[n] = aad(x, na.rm = T)
+  coef_var[n] = sd(x,na.rm=TRUE)/mean(x, na.rm=TRUE)*100
+  
+  n=n+1
+  
+  V = optimizeParam(x, x, par, min.rec = 3.5, max.rec = 4.5)
+  if (length(V)>1){
+    radius[n]=V$radius
+    delay[n]=V$delay
+    embed[n]=V$embed
+  }
 
 } 
+  
+df1 = data.frame(participant, diagnosis, trial, study, mean, sd, range_min, range_max, median, iqr, abs_dev, coef_var, radius, delay, embed)
+  
 
 
-Df = apply(temp, function(x) my_func(x))
+for (i in pitch_files){
+  x = read_csv(i)
+  x = x$f0
+  crqa(x, x, delay = median(df1$delay), embed = median(df1$embed), radius = median(df1$radius))
+  n = n+1
+}
+
+
+
 ```
 
 
