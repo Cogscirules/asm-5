@@ -171,8 +171,11 @@ image(RP, xlab = "", ylab = "", col = cols)
 
 #Study1 D0 S 117 T3_f0.txt
 
-pitch_files=list.files(path = "Pitch", full.names = T)
+wd2 = setwd("C:/Users/Bruger/Desktop/Programming/Semester 3/asm. 5/Pitch")
 
+pitch_files=list.files(wd2, full.names = T)
+
+pitch_files=list.files(path = "Pitch", full.names = T)
 
 participant = NULL
 diagnosis = NULL
@@ -181,7 +184,7 @@ study = NULL
 mean = NULL
 sd = NULL
 range_min = NULL
-range_max
+range_max = NULL
 median = NULL
 iqr = NULL
 abs_dev = NULL
@@ -195,7 +198,7 @@ n = 1
 #Study1 D0 S 117 T3_f0.txt
 
 for (i in pitch_files){ 
-  x = read_csv(i, header = T)
+  x = read_csv(i)
   x = x$f0
   ID = str_extract(i, "S\\d+")
   participant[n]=str_extract(ID, "\\d+")
@@ -217,25 +220,29 @@ for (i in pitch_files){
   abs_dev[n] = aad(x, na.rm = T)
   coef_var[n] = sd(x,na.rm=TRUE)/mean(x, na.rm=TRUE)*100
   
-  n=n+1
   
-  V = optimizeParam(x, x, par, min.rec = 3.5, max.rec = 4.5)
+  V = try(optimizeParam(x, x, par, min.rec = 3.5, max.rec = 4.5))
   if (length(V)>1){
     radius[n]=V$radius
     delay[n]=V$delay
     embed[n]=V$embed
+  }else{ radius[n] = NA
+  delay[n] = NA
+  embed[n] = NA
   }
-
+  n = n+1
 } 
   
 df1 = data.frame(participant, diagnosis, trial, study, mean, sd, range_min, range_max, median, iqr, abs_dev, coef_var, radius, delay, embed)
-  
 
+View(df1)
+  
 
 for (i in pitch_files){
   x = read_csv(i)
   x = x$f0
-  crqa(x, x, delay = median(df1$delay), embed = median(df1$embed), radius = median(df1$radius))
+  result = crqa(x, x, delay = median(df1$delay), embed = median(df1$embed), radius = median(df1$radius))
+  
   n = n+1
 }
 
